@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>Akıllı Film/Dizi Önerici</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&family=Bangers&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+
+body{
+font-family:'Poppins',sans-serif;
+background:linear-gradient(to bottom,#001f3f,#003566);
+color:white;
+min-height:100vh;
+overflow:hidden;
+display:flex;
+align-items:center;
+justify-content:center;
+}
+
+.container{
+background:rgba(0,0,0,0.75);
+padding:40px;
+border-radius:25px;
+width:720px;
+max-width:95%;
+text-align:center;
+box-shadow:0 0 40px rgba(0,0,0,0.7);
+animation:fadeIn 0.8s ease;
+}
+
+h1{
+font-family:'Bangers',cursive;
+font-size:48px;
+letter-spacing:3px;
+margin-bottom:25px;
+}
+
+.question{
+font-size:22px;
+margin-bottom:25px;
+min-height:60px;
+}
+
+.options button{
+display:block;
+width:100%;
+margin:10px 0;
+padding:15px;
+border:none;
+border-radius:15px;
+font-size:16px;
+cursor:pointer;
+background:linear-gradient(45deg,#00b4d8,#90e0ef);
+color:#001d3d;
+font-weight:600;
+transition:0.3s;
+}
+
+.options button:hover{
+transform:scale(1.07);
+box-shadow:0 0 25px #00b4d8;
+}
+
+.result img{
+width:220px;
+border-radius:20px;
+margin-top:20px;
+box-shadow:0 0 30px rgba(255,255,255,0.3);
+}
+
+@keyframes fadeIn{
+from{opacity:0;transform:translateY(20px);}
+to{opacity:1;transform:translateY(0);}
+}
+
+/* BALIK */
+.fish{position:fixed;pointer-events:none;opacity:0.8;}
+@keyframes swimRight{0%{transform:translateX(-150px);}100%{transform:translateX(110vw);}}
+@keyframes swimLeft{0%{transform:translateX(110vw) scaleX(-1);}100%{transform:translateX(-150px) scaleX(-1);}}
+</style>
+</head>
+<body>
+
+<div class="container">
+<h1>NE İZLEMELİYİM?</h1>
+<div class="question" id="question"></div>
+<div class="options" id="options"></div>
+<div class="result" id="result"></div>
+</div>
+
+<script>
+
+// CONTENT DATABASE
+const contents = [
+{
+name:"Inception",
+type:"film",
+tags:["mind","fiction","dark","fast","shock"],
+img:"https://m.media-amazon.com/images/I/51NbVEuw1HL._AC_.jpg"
+},
+{
+name:"Oppenheimer",
+type:"film",
+tags:["real","dark","slow"],
+img:"https://m.media-amazon.com/images/I/71Y0iKX+9DL._AC_SL1500_.jpg"
+},
+{
+name:"Titanic",
+type:"film",
+tags:["emotion","slow","real","light"],
+img:"https://m.media-amazon.com/images/I/71yXKkqfBGL._AC_SL1188_.jpg"
+},
+{
+name:"The Dark Knight",
+type:"film",
+tags:["dark","fast","thrill"],
+img:"https://m.media-amazon.com/images/I/51EbJjlTj-L._AC_.jpg"
+},
+{
+name:"Dark",
+type:"series",
+tags:["mind","dark","slow","fiction","shock"],
+img:"https://m.media-amazon.com/images/I/81p+xe8cbnL._AC_SL1500_.jpg"
+},
+{
+name:"Chernobyl",
+type:"series",
+tags:["real","dark","slow"],
+img:"https://m.media-amazon.com/images/I/71fM+7eJYFL._AC_SL1200_.jpg"
+},
+{
+name:"Friends",
+type:"series",
+tags:["fun","light","fast"],
+img:"https://m.media-amazon.com/images/I/81u5X0X9cPL._AC_SL1500_.jpg"
+},
+{
+name:"Breaking Bad",
+type:"series",
+tags:["dark","thrill","slow"],
+img:"https://m.media-amazon.com/images/I/81VStYnDGrL._AC_SL1500_.jpg"
+}
+];
+
+// QUESTIONS
+const questions=[
+{
+text:"Film mi izlemek istiyorsun yoksa dizi mi?",
+answers:[
+{text:"Film 🎬",value:"film"},
+{text:"Dizi 📺",value:"series"}
+]
+},
+{
+text:"Hikaye seni nasıl etkilemeli?",
+answers:[
+{text:"Beyin yaksın 🤯",value:"mind"},
+{text:"Duygusal olsun 💔",value:"emotion"},
+{text:"Gerilimli olsun 😨",value:"thrill"},
+{text:"Eğlenceli olsun 😎",value:"fun"}
+]
+},
+{
+text:"Tempo nasıl olsun?",
+answers:[
+{text:"Yavaş ama derin",value:"slow"},
+{text:"Hızlı ve sürükleyici",value:"fast"}
+]
+},
+{
+text:"Gerçek olay mı kurgu evren mi?",
+answers:[
+{text:"Gerçek olaylar",value:"real"},
+{text:"Kurgu evren",value:"fiction"}
+]
+},
+{
+text:"Atmosfer nasıl olsun?",
+answers:[
+{text:"Karanlık",value:"dark"},
+{text:"Daha hafif",value:"light"}
+]
+},
+{
+text:"Final nasıl hissettirmeli?",
+answers:[
+{text:"Şok etkisi",value:"shock"},
+{text:"Tatmin edici",value:"satisfy"}
+]
+}
+];
+
+let current=0;
+let selectedTags=[];
+let selectedType=null;
+
+function showQuestion(){
+if(current>=questions.length){ calculateResult(); return; }
+
+let q=questions[current];
+document.getElementById("question").innerText=q.text;
+let opt=document.getElementById("options");
+opt.innerHTML="";
+document.getElementById("result").innerHTML="";
+
+q.answers.forEach(a=>{
+let btn=document.createElement("button");
+btn.innerText=a.text;
+btn.onclick=()=>{
+if(current===0){
+selectedType=a.value;
+}else{
+selectedTags.push(a.value);
+}
+current++;
+showQuestion();
+};
+opt.appendChild(btn);
+});
+}
+
+function calculateResult(){
+
+let filtered=contents.filter(c=>c.type===selectedType);
+
+let best=null;
+let maxScore=-1;
+
+filtered.forEach(c=>{
+let score=0;
+selectedTags.forEach(tag=>{
+if(c.tags.includes(tag)) score+=2;
+});
+if(score>maxScore){
+maxScore=score;
+best=c;
+}
+});
+
+document.getElementById("options").innerHTML="";
+document.getElementById("question").innerText="Sana en uygun öneri:";
+document.getElementById("result").innerHTML=`
+<h2>${best.name}</h2>
+<img src="${best.img}">
+`;
+}
+
+showQuestion();
+
+// BALIK
+const fishEmojis=["🐟","🐠","🐡"];
+for(let i=0;i<14;i++){
+let fish=document.createElement("div");
+fish.className="fish";
+fish.innerText=fishEmojis[Math.floor(Math.random()*fishEmojis.length)];
+fish.style.top=Math.random()*90+"vh";
+fish.style.fontSize=(30+Math.random()*50)+"px";
+let duration=(15+Math.random()*20)+"s";
+if(Math.random()>0.5){
+fish.style.animation=`swimRight ${duration} linear infinite`;
+}else{
+fish.style.animation=`swimLeft ${duration} linear infinite`;
+}
+document.body.appendChild(fish);
+}
+
+</script>
+</body>
+</html>
